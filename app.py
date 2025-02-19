@@ -10,7 +10,6 @@ def generate_response(input_text):
     model = ChatOpenAI(
         temperature=0.2,
         model_name="gpt-4o-mini",
-        temperature=0.1,
         api_key=openai_api_key,
     )
     st.info(model.invoke(input_text))
