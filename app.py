@@ -23,7 +23,7 @@ st.sidebar.markdown("https://github.com/Czerny40/gpt-challenge")
 
 # 상태 초기화
 if "messages" not in st.session_state:
-    st.session_state["messages"] = []
+    st.session_state["messages"] = []  # 메시지 기록
 if "retriever" not in st.session_state:
     st.session_state.retriever = None
 
@@ -96,18 +96,20 @@ def get_response(message, retriever):
     return chain.invoke(message, config={"callbacks": [ChatCallbackHandler()]})
 
 
-def send_message(message, role, save=True):
+def send_message(message, role):
     with st.chat_message(role):
         st.markdown(message)
-    if save:
-        save_message(message, role)
-        
+    save_message(message, role)
+
+
 def save_message(message, role):
     st.session_state["messages"].append({"message": message, "role": role})
 
+
 def load_chat_history():
     for message in st.session_state["messages"]:
-        send_message(message["message"], message["role"], save=False)
+        with st.chat_message(message["role"]):
+            st.markdown(message["message"])
 
 
 def format_documents(docs):
@@ -166,9 +168,10 @@ if file:
 
     if message:
         send_message(message, "human")
+
         with st.chat_message("ai"):
             response = get_response(message, st.session_state.retriever)
-            st.markdown(response.content)
+            send_message(response.content, "ai")
 
 else:
     if not openai_api_key:
