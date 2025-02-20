@@ -63,26 +63,7 @@ def embed_file(file):
 
     vectorstore = FAISS.from_documents(docs, cached_embeddings)
 
-    vector_retriever = vectorstore.as_retriever(
-        search_type="mmr",  # MMR(Maximum Marginal Relevance) : 검색 결과의 품질과 다양성을 동시에 고려
-        search_kwargs={
-            "k": 4,  # 검색할 문서 수
-            "fetch_k": 20,  # 후보 풀 크기
-            "lambda_mult": 0.7,  # 다양성 vs 관련성 가중치 (1에 가까울수록 관련성 중시)
-        },
-    )
-
-    # BM25 : 문서 검색을 위한 강력한 랭킹 알고리즘으로, 문서와 검색어 간의 관련성을 평가
-    bm25_retriever = BM25Retriever.from_documents(docs)
-    bm25_retriever.k = 4  # 검색할 문서 수
-
-    # 하이브리드 검색기 생성
-    ensemble_retriever = EnsembleRetriever(
-        retrievers=[bm25_retriever, vector_retriever],
-        weights=[0.5, 0.5],  # 각 검색기의 가중치
-    )
-
-    return ensemble_retriever
+    retriever = vectorstore.as_retriever()
 
 
 # 메시지 표시 함수
