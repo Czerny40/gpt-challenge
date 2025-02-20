@@ -1,11 +1,8 @@
 from langchain.chat_models import ChatOpenAI
 from langchain.document_loaders import UnstructuredFileLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.embeddings import OpenAIEmbeddings, CacheBackedEmbeddings
+from langchain.embeddings import OpenAIEmbeddings
 from langchain.vectorstores import FAISS
-from langchain.retrievers import BM25Retriever
-from langchain.retrievers import EnsembleRetriever
-from langchain.storage import LocalFileStore
 from langchain.prompts import ChatPromptTemplate
 from langchain.schema.runnable import RunnablePassthrough, RunnableLambda
 from langchain.callbacks.base import BaseCallbackHandler
@@ -35,8 +32,6 @@ class ChatCallbackHandler(BaseCallbackHandler):
 if "messages" not in st.session_state:
     st.session_state["messages"] = []
 
-if "vectorstore" not in st.session_state:
-    st.session_state.vectorstore = None
 
 @st.cache_resource(show_spinner="파일을 분석하고있어요...")
 def embed_file(file):
@@ -72,11 +67,9 @@ def embed_file(file):
 
     # cached_embeddings = CacheBackedEmbeddings.from_bytes_store(embeddings, cache_dir)
 
-    # vectorstore = FAISS.from_documents(docs, embeddings)
+    vectorstore = FAISS.from_documents(docs, embeddings)
 
-    st.session_state.vectorstore = FAISS.from_documents(docs, embeddings)
-
-    retriever = st.session_state.vectorstore.as_retriever()
+    retriever = vectorstore.as_retriever()
 
     # 세션에 임베딩 저장
     st.session_state.embeddings[file_name] = embeddings
@@ -151,11 +144,7 @@ with st.sidebar:
     )
 
 if file and openai_api_key:
-
-    if st.session_state.vectorstore is None:
-        retriever = embed_file(file)
-    else:
-        retriever = st.session_state.vectorstore.as_retriever()
+    retriever = embed_file(file)
 
     llm = ChatOpenAI(
         model_name="gpt-4o-mini",
@@ -172,7 +161,7 @@ if file and openai_api_key:
         chain = (
             {
                 "context": retriever
-                | RunnableLambda(format_documents),
+                | RunnableLambda(lambda docs: format_documents(docs)),
                 "question": RunnablePassthrough(),
             }
             | prompt
