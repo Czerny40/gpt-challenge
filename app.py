@@ -3,53 +3,43 @@ from langchain.document_loaders import UnstructuredFileLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.embeddings import OpenAIEmbeddings, CacheBackedEmbeddings
 from langchain.vectorstores import FAISS
+from langchain.retrievers import BM25Retriever
+from langchain.retrievers import EnsembleRetriever
 from langchain.storage import LocalFileStore
 from langchain.prompts import ChatPromptTemplate
 from langchain.schema.runnable import RunnablePassthrough, RunnableLambda
 from langchain.callbacks.base import BaseCallbackHandler
 import streamlit as st
-import os
-
-
-# 디렉토리 생성 함수
-def create_directory(path):
-    os.makedirs(path, exist_ok=True)
-
 
 st.title("🦜🔗 Streamlit is 🔥")
 
 openai_api_key = st.sidebar.text_input("OpenAI API Key", type="password")
 st.sidebar.markdown("https://github.com/Czerny40/gpt-challenge")
 
-# 상태 초기화
-if "messages" not in st.session_state:
-    st.session_state["messages"] = []  # 메시지 기록
-
 
 class ChatCallbackHandler(BaseCallbackHandler):
-    def __init__(self):
-        self.message = ""
+
+    message = ""
 
     def on_llm_start(self, *args, **kwargs):
         self.message_box = st.empty()
+
+    def on_llm_end(self, *args, **kwargs):
+        save_message(self.message, "ai")
 
     def on_llm_new_token(self, token: str, *args, **kwargs):
         self.message += token
         self.message_box.markdown(self.message)
 
-    def on_llm_end(self, *args, **kwargs):
-        save_message(self.message, "ai")
+
+if "messages" not in st.session_state:
+    st.session_state["messages"] = []
 
 
 @st.cache_resource(show_spinner="파일을 분석하고있어요...")
-def process_document(file):
-    # 캐시 디렉토리 생성
-    create_directory("./.cache/files")
-    create_directory(f"./.cache/embeddings/{file.name}")
-
+def embed_file(file):
     file_content = file.read()
     file_path = f"./.cache/files/{file.name}"
-
     with open(file_path, "wb") as f:
         f.write(file_content)
 
@@ -62,8 +52,8 @@ def process_document(file):
         length_function=len,
     )
 
-    loader = UnstructuredFileLoader(file_path)
-    docs = loader.load_and_split(text_splitter=splitter)
+    file_loader = UnstructuredFileLoader(file_path)
+    docs = file_loader.load_and_split(text_splitter=splitter)
 
     embeddings = OpenAIEmbeddings(
         model="text-embedding-3-small", api_key=openai_api_key
@@ -72,28 +62,13 @@ def process_document(file):
     cached_embeddings = CacheBackedEmbeddings.from_bytes_store(embeddings, cache_dir)
 
     vectorstore = FAISS.from_documents(docs, cached_embeddings)
-    return vectorstore.as_retriever()
+
+    retriever = vectorstore.as_retriever()
+
+    return retriever
 
 
-def get_response(message, retriever):
-    llm = ChatOpenAI(
-        model_name="gpt-4o-mini",
-        temperature=0.1,
-        api_key=openai_api_key,
-    )
-
-    chain = (
-        {
-            "context": retriever | RunnableLambda(lambda docs: format_documents(docs)),
-            "question": RunnablePassthrough(),
-        }
-        | prompt
-        | llm
-    )
-
-    return chain.invoke(message, config={"callbacks": [ChatCallbackHandler()]})
-
-
+# 메시지 표시 함수
 def send_message(message, role, save=True):
     with st.chat_message(role):
         st.markdown(message)
@@ -101,10 +76,12 @@ def send_message(message, role, save=True):
         save_message(message, role)
 
 
+# 메시지 저장 함수
 def save_message(message, role):
     st.session_state["messages"].append({"message": message, "role": role})
 
 
+# 채팅 기록 불러오기 함수
 def load_chat_history():
     for message in st.session_state["messages"]:
         send_message(message["message"], message["role"], save=False)
@@ -148,6 +125,7 @@ st.sidebar.markdown(
 - PDF (.pdf)
 - 텍스트 파일 (.txt)
 - Word 문서 (.docx)
+
 """
 )
 
@@ -156,20 +134,33 @@ with st.sidebar:
         ".txt, .pdf, .docx 파일을 업로드해주세요", type=["txt", "pdf", "docx"]
     )
 
-if file:
-    retriever = process_document(file)
+if file and openai_api_key:
+    retriever = embed_file(file)
+
+    llm = ChatOpenAI(
+        model_name="gpt-4o-mini",
+        temperature=0.1,
+        api_key=openai_api_key,
+    )
 
     send_message("무엇이든 물어보세요!", "ai", save=False)
     load_chat_history()
-
     message = st.chat_input("업로드한 문서에 대해 무엇이든 물어보세요")
 
     if message:
         send_message(message, "human")
-
+        chain = (
+            {
+                "context": retriever
+                | RunnableLambda(lambda docs: format_documents(docs)),
+                "question": RunnablePassthrough(),
+            }
+            | prompt
+            | llm
+        )
         with st.chat_message("ai"):
-            response = get_response(message, retriever)
-            send_message(response.content, "ai")
+            response = chain.invoke(message)
+            st.markdown(response.content)
 
 else:
     if not openai_api_key:
