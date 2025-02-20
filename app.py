@@ -161,7 +161,7 @@ with st.sidebar:
 if file:
     st.session_state.retriever = process_document(file)
 
-    send_message("무엇이든 물어보세요!", "ai", save=False)
+    send_message("무엇이든 물어보세요!", "ai")
     load_chat_history()
 
     message = st.chat_input("업로드한 문서에 대해 무엇이든 물어보세요")
