@@ -24,8 +24,6 @@ st.sidebar.markdown("https://github.com/Czerny40/gpt-challenge")
 # 상태 초기화
 if "messages" not in st.session_state:
     st.session_state["messages"] = []  # 메시지 기록
-if "retriever" not in st.session_state:
-    st.session_state.retriever = None
 
 
 class ChatCallbackHandler(BaseCallbackHandler):
@@ -96,10 +94,11 @@ def get_response(message, retriever):
     return chain.invoke(message, config={"callbacks": [ChatCallbackHandler()]})
 
 
-def send_message(message, role):
+def send_message(message, role, save=True):
     with st.chat_message(role):
         st.markdown(message)
-    save_message(message, role)
+    if save:
+        save_message(message, role)
 
 
 def save_message(message, role):
@@ -108,8 +107,7 @@ def save_message(message, role):
 
 def load_chat_history():
     for message in st.session_state["messages"]:
-        with st.chat_message(message["role"]):
-            st.markdown(message["message"])
+        send_message(message["message"], message["role"], save=False)
 
 
 def format_documents(docs):
@@ -159,9 +157,9 @@ with st.sidebar:
     )
 
 if file:
-    st.session_state.retriever = process_document(file)
+    retriever = process_document(file)
 
-    send_message("무엇이든 물어보세요!", "ai")
+    send_message("무엇이든 물어보세요!", "ai", save=False)
     load_chat_history()
 
     message = st.chat_input("업로드한 문서에 대해 무엇이든 물어보세요")
@@ -170,11 +168,9 @@ if file:
         send_message(message, "human")
 
         with st.chat_message("ai"):
-            response = get_response(message, st.session_state.retriever)
-            send_message(response.content, "ai")
+            response = get_response(message, retriever)
 
 else:
     if not openai_api_key:
         st.warning("사이드바에 OpenAI API 키를 입력해주세요")
     st.session_state["messages"] = []
-    st.session_state.retriever = None
