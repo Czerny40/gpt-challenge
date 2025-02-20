@@ -8,6 +8,13 @@ from langchain.prompts import ChatPromptTemplate
 from langchain.schema.runnable import RunnablePassthrough, RunnableLambda
 from langchain.callbacks.base import BaseCallbackHandler
 import streamlit as st
+import os
+
+
+# 디렉토리 생성 함수
+def create_directory(path):
+    os.makedirs(path, exist_ok=True)
+
 
 st.title("🦜🔗 Streamlit is 🔥")
 
@@ -33,13 +40,18 @@ class ChatCallbackHandler(BaseCallbackHandler):
         self.message_box.markdown(self.message)
 
     def on_llm_end(self, *args, **kwargs):
-        st.session_state["messages"].append({"message": self.message, "role": "ai"})[1]
+        pass
 
 
 @st.cache_resource(show_spinner="파일을 분석하고있어요...")
 def process_document(file):
+    # 캐시 디렉토리 생성
+    create_directory("./.cache/files")
+    create_directory(f"./.cache/embeddings/{file.name}")
+
     file_content = file.read()
     file_path = f"./.cache/files/{file.name}"
+
     with open(file_path, "wb") as f:
         f.write(file_content)
 
@@ -67,7 +79,7 @@ def process_document(file):
 
 def get_response(message, retriever):
     llm = ChatOpenAI(
-        model_name="gpt-4-turbo-preview",
+        model_name="gpt-4o-mini",
         temperature=0.1,
         api_key=openai_api_key,
     )
@@ -88,11 +100,7 @@ def send_message(message, role, save=True):
     with st.chat_message(role):
         st.markdown(message)
     if save:
-        save_message(message, role)
-
-
-def save_message(message, role):
-    st.session_state["messages"].append({"message": message, "role": role})
+        st.session_state["messages"].append({"message": message, "role": role})
 
 
 def load_chat_history():
@@ -147,9 +155,7 @@ with st.sidebar:
     )
 
 if file and openai_api_key:
-    # 문서가 새로 업로드되었을 때만 처리
-    if st.session_state.retriever is None:
-        st.session_state.retriever = process_document(file)
+    st.session_state.retriever = process_document(file)
 
     send_message("무엇이든 물어보세요!", "ai", save=False)
     load_chat_history()
@@ -161,13 +167,9 @@ if file and openai_api_key:
         with st.chat_message("ai"):
             response = get_response(message, st.session_state.retriever)
             st.markdown(response.content)
-            save_message(response.content, "ai")
-
-elif not openai_api_key:
-    st.warning("사이드바에 OpenAI API 키를 입력해주세요")
-    st.session_state["messages"] = []
-    st.session_state.retriever = None
-
+            
 else:
+    if not openai_api_key:
+        st.warning("사이드바에 OpenAI API 키를 입력해주세요")
     st.session_state["messages"] = []
     st.session_state.retriever = None
