@@ -161,6 +161,7 @@ if file and openai_api_key:
         with st.chat_message("ai"):
             response = get_response(message, st.session_state.retriever)
             st.markdown(response.content)
+            save_message(response.content, "ai")
 
 elif not openai_api_key:
     st.warning("사이드바에 OpenAI API 키를 입력해주세요")
