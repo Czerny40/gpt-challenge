@@ -3,8 +3,6 @@ from langchain.document_loaders import UnstructuredFileLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.embeddings import OpenAIEmbeddings, CacheBackedEmbeddings
 from langchain.vectorstores import FAISS
-from langchain.retrievers import BM25Retriever
-from langchain.retrievers import EnsembleRetriever
 from langchain.storage import LocalFileStore
 from langchain.prompts import ChatPromptTemplate
 from langchain.schema.runnable import RunnablePassthrough, RunnableLambda
@@ -24,17 +22,18 @@ if "retriever" not in st.session_state:
 
 
 class ChatCallbackHandler(BaseCallbackHandler):
-    message = ""
+    def __init__(self):
+        self.message = ""
 
     def on_llm_start(self, *args, **kwargs):
         self.message_box = st.empty()
 
-    def on_llm_end(self, *args, **kwargs):
-        save_message(self.message, "ai")
-
     def on_llm_new_token(self, token: str, *args, **kwargs):
         self.message += token
         self.message_box.markdown(self.message)
+
+    def on_llm_end(self, *args, **kwargs):
+        st.session_state["messages"].append({"message": self.message, "role": "ai"})[1]
 
 
 @st.cache_resource(show_spinner="파일을 분석하고있어요...")
@@ -84,14 +83,17 @@ def get_response(message, retriever):
 
     return chain.invoke(message, config={"callbacks": [ChatCallbackHandler()]})
 
+
 def send_message(message, role, save=True):
     with st.chat_message(role):
         st.markdown(message)
     if save:
         save_message(message, role)
 
+
 def save_message(message, role):
     st.session_state["messages"].append({"message": message, "role": role})
+
 
 def load_chat_history():
     for message in st.session_state["messages"]:
