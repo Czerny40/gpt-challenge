@@ -158,9 +158,9 @@ if file and openai_api_key:
             | prompt
             | llm
         )
-        with st.chat_message("ai"):
-            response = chain.invoke(message)
-            st.markdown(response.content)
+        response = chain.invoke(message)
+        send_message(response.content, "ai")
+            
 
 else:
     if not openai_api_key:
