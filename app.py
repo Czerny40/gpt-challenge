@@ -40,7 +40,7 @@ class ChatCallbackHandler(BaseCallbackHandler):
         self.message_box.markdown(self.message)
 
     def on_llm_end(self, *args, **kwargs):
-        pass
+        save_message(self.message, "ai")
 
 
 @st.cache_resource(show_spinner="파일을 분석하고있어요...")
@@ -100,8 +100,10 @@ def send_message(message, role, save=True):
     with st.chat_message(role):
         st.markdown(message)
     if save:
-        st.session_state["messages"].append({"message": message, "role": role})
-
+        save_message(message, role)
+        
+def save_message(message, role):
+    st.session_state["messages"].append({"message": message, "role": role})
 
 def load_chat_history():
     for message in st.session_state["messages"]:
@@ -154,7 +156,7 @@ with st.sidebar:
         ".txt, .pdf, .docx 파일을 업로드해주세요", type=["txt", "pdf", "docx"]
     )
 
-if file and openai_api_key:
+if file:
     st.session_state.retriever = process_document(file)
 
     send_message("무엇이든 물어보세요!", "ai", save=False)
@@ -167,7 +169,7 @@ if file and openai_api_key:
         with st.chat_message("ai"):
             response = get_response(message, st.session_state.retriever)
             st.markdown(response.content)
-            
+
 else:
     if not openai_api_key:
         st.warning("사이드바에 OpenAI API 키를 입력해주세요")
