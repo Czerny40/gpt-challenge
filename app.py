@@ -16,35 +16,26 @@ st.title("🦜🔗 Streamlit is 🔥")
 openai_api_key = st.sidebar.text_input("OpenAI API Key", type="password")
 st.sidebar.markdown("https://github.com/Czerny40/gpt-challenge")
 
-# AI 응답을 실시간으로 표시하기 위한 콜백 핸들러
+
 class ChatCallbackHandler(BaseCallbackHandler):
 
     message = ""
 
     def on_llm_start(self, *args, **kwargs):
-        # AI 응답 시작 시 빈 메시지 박스 생성
         self.message_box = st.empty()
 
     def on_llm_end(self, *args, **kwargs):
-        # AI 응답 완료 시 메시지 저장
         save_message(self.message, "ai")
 
     def on_llm_new_token(self, token: str, *args, **kwargs):
-        # 응답이 토큰로 생성될 때마다 실시간으로 화면에 표시
         self.message += token
         self.message_box.markdown(self.message)
 
 
-llm = ChatOpenAI(
-    model_name="gpt-4o-mini",
-    temperature=0.1,
-    api_key=openai_api_key,
-)
-# 메시지 저장소 초기화
 if "messages" not in st.session_state:
     st.session_state["messages"] = []
 
-# 파일 임베딩 함수
+
 @st.cache_resource(show_spinner="파일을 분석하고있어요...")
 def embed_file(file):
     file_content = file.read()
@@ -65,7 +56,7 @@ def embed_file(file):
     docs = file_loader.load_and_split(text_splitter=splitter)
 
     embeddings = OpenAIEmbeddings(
-        model="text-embedding-3-small",
+        model="text-embedding-3-small", api_key=openai_api_key
     )
 
     cached_embeddings = CacheBackedEmbeddings.from_bytes_store(embeddings, cache_dir)
@@ -73,7 +64,7 @@ def embed_file(file):
     vectorstore = FAISS.from_documents(docs, cached_embeddings)
 
     vector_retriever = vectorstore.as_retriever(
-        search_type="mmr", # MMR(Maximum Marginal Relevance) : 검색 결과의 품질과 다양성을 동시에 고려
+        search_type="mmr",  # MMR(Maximum Marginal Relevance) : 검색 결과의 품질과 다양성을 동시에 고려
         search_kwargs={
             "k": 4,  # 검색할 문서 수
             "fetch_k": 20,  # 후보 풀 크기
@@ -93,6 +84,7 @@ def embed_file(file):
 
     return ensemble_retriever
 
+
 # 메시지 표시 함수
 def send_message(message, role, save=True):
     with st.chat_message(role):
@@ -100,9 +92,11 @@ def send_message(message, role, save=True):
     if save:
         save_message(message, role)
 
+
 # 메시지 저장 함수
 def save_message(message, role):
     st.session_state["messages"].append({"message": message, "role": role})
+
 
 # 채팅 기록 불러오기 함수
 def load_chat_history():
@@ -160,6 +154,12 @@ with st.sidebar:
 if file:
 
     retriever = embed_file(file)
+
+    llm = ChatOpenAI(
+        model_name="gpt-4-turbo-preview",
+        temperature=0.1,
+        api_key=openai_api_key,
+    )
 
     send_message("무엇이든 물어보세요!", "ai", save=False)
     load_chat_history()
