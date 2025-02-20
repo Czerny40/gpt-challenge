@@ -164,6 +164,7 @@ if file and openai_api_key:
     if message:
         send_message(message, "human")
         response = get_response(message, st.session_state.retriever)
+        st.markdown(response.content)
         save_message(response.content, "ai")
 
 elif not openai_api_key:
