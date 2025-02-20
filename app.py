@@ -172,7 +172,7 @@ if file and openai_api_key:
         chain = (
             {
                 "context": retriever
-                | RunnableLambda(lambda docs: format_documents(docs)),
+                | RunnableLambda(format_documents),
                 "question": RunnablePassthrough(),
             }
             | prompt
