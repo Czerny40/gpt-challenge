@@ -38,12 +38,21 @@ if "messages" not in st.session_state:
 
 @st.cache_resource(show_spinner="파일을 분석하고있어요...")
 def embed_file(file):
+
+    file_name = file.name
+    if "embeddings" not in st.session_state:
+        st.session_state.embeddings = {}
+
+    if file_name in st.session_state.embeddings:
+        return st.session_state.embeddings[file_name]
+
+
     file_content = file.read()
     file_path = f"./.cache/files/{file.name}"
     with open(file_path, "wb") as f:
         f.write(file_content)
 
-    cache_dir = LocalFileStore(f"./.cache/embeddings/{file.name}")
+    # cache_dir = LocalFileStore(f"./.cache/embeddings/{file.name}")
 
     splitter = RecursiveCharacterTextSplitter(
         chunk_size=1000,
@@ -59,11 +68,14 @@ def embed_file(file):
         model="text-embedding-3-small", api_key=openai_api_key
     )
 
-    cached_embeddings = CacheBackedEmbeddings.from_bytes_store(embeddings, cache_dir)
+    # cached_embeddings = CacheBackedEmbeddings.from_bytes_store(embeddings, cache_dir)
 
-    vectorstore = FAISS.from_documents(docs, cached_embeddings)
+    vectorstore = FAISS.from_documents(docs, embeddings)
 
     retriever = vectorstore.as_retriever()
+
+    # 세션에 임베딩 저장
+    st.session_state.embeddings[file_name] = embeddings
 
     return retriever
 
