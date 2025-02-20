@@ -65,6 +65,8 @@ def embed_file(file):
 
     retriever = vectorstore.as_retriever()
 
+    return retriever
+
 
 # 메시지 표시 함수
 def send_message(message, role, save=True):
