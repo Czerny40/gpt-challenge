@@ -151,8 +151,7 @@ with st.sidebar:
         ".txt, .pdf, .docx 파일을 업로드해주세요", type=["txt", "pdf", "docx"]
     )
 
-if file:
-
+if file and openai_api_key:
     retriever = embed_file(file)
 
     llm = ChatOpenAI(
@@ -177,6 +176,8 @@ if file:
         )
         with st.chat_message("ai"):
             response = chain.invoke(message)
-
+elif not openai_api_key:
+    st.warning("사이드바에 OpenAI API 키를 입력해주세요")
+    st.session_state["messages"] = []
 else:
     st.session_state["messages"] = []
