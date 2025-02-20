@@ -33,8 +33,7 @@ class ChatCallbackHandler(BaseCallbackHandler):
         self.message_box.markdown(self.message)
 
     def on_llm_end(self, *args, **kwargs):
-        if "messages" in st.session_state:
-            st.session_state["messages"].append({"message": self.message, "role": "ai"})
+        st.session_state["messages"].append({"message": self.message, "role": "ai"})[1]
 
 
 @st.cache_resource(show_spinner="파일을 분석하고있어요...")
@@ -68,7 +67,7 @@ def process_document(file):
 
 def get_response(message, retriever):
     llm = ChatOpenAI(
-        model_name="gpt-4o-mini",
+        model_name="gpt-4-turbo-preview",
         temperature=0.1,
         api_key=openai_api_key,
     )
@@ -82,11 +81,7 @@ def get_response(message, retriever):
         | llm
     )
 
-    message_box = st.empty()
-    callback = ChatCallbackHandler()
-    callback.message_box = message_box
-
-    return chain.invoke(message, config={"callbacks": [callback]})
+    return chain.invoke(message, config={"callbacks": [ChatCallbackHandler()]})
 
 
 def send_message(message, role, save=True):
@@ -163,9 +158,10 @@ if file and openai_api_key:
 
     if message:
         send_message(message, "human")
-        response = get_response(message, st.session_state.retriever)
-        st.markdown(response.content)
-        save_message(response.content, "ai")
+        with st.chat_message("ai"):
+            response = get_response(message, st.session_state.retriever)
+            st.markdown(response.content)
+            save_message(response.content, "ai")
 
 elif not openai_api_key:
     st.warning("사이드바에 OpenAI API 키를 입력해주세요")
