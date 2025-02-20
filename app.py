@@ -169,6 +169,7 @@ if file:
 
         with st.chat_message("ai"):
             response = get_response(message, retriever)
+            send_message(response.content, "ai")
 
 else:
     if not openai_api_key:
