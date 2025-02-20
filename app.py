@@ -16,9 +16,14 @@ st.title("🦜🔗 Streamlit is 🔥")
 openai_api_key = st.sidebar.text_input("OpenAI API Key", type="password")
 st.sidebar.markdown("https://github.com/Czerny40/gpt-challenge")
 
+# 상태 초기화
+if "messages" not in st.session_state:
+    st.session_state["messages"] = []
+if "retriever" not in st.session_state:
+    st.session_state.retriever = None
+
 
 class ChatCallbackHandler(BaseCallbackHandler):
-
     message = ""
 
     def on_llm_start(self, *args, **kwargs):
@@ -32,12 +37,8 @@ class ChatCallbackHandler(BaseCallbackHandler):
         self.message_box.markdown(self.message)
 
 
-if "messages" not in st.session_state:
-    st.session_state["messages"] = []
-
-
 @st.cache_resource(show_spinner="파일을 분석하고있어요...")
-def embed_file(file):
+def process_document(file):
     file_content = file.read()
     file_path = f"./.cache/files/{file.name}"
     with open(file_path, "wb") as f:
@@ -52,8 +53,8 @@ def embed_file(file):
         length_function=len,
     )
 
-    file_loader = UnstructuredFileLoader(file_path)
-    docs = file_loader.load_and_split(text_splitter=splitter)
+    loader = UnstructuredFileLoader(file_path)
+    docs = loader.load_and_split(text_splitter=splitter)
 
     embeddings = OpenAIEmbeddings(
         model="text-embedding-3-small", api_key=openai_api_key
@@ -62,26 +63,36 @@ def embed_file(file):
     cached_embeddings = CacheBackedEmbeddings.from_bytes_store(embeddings, cache_dir)
 
     vectorstore = FAISS.from_documents(docs, cached_embeddings)
-
-    retriever = vectorstore.as_retriever()
-
-    return retriever
+    return vectorstore.as_retriever()
 
 
-# 메시지 표시 함수
+def get_response(message, retriever):
+    llm = ChatOpenAI(
+        model_name="gpt-4-turbo-preview",
+        temperature=0.1,
+        api_key=openai_api_key,
+    )
+
+    chain = (
+        {
+            "context": retriever | RunnableLambda(lambda docs: format_documents(docs)),
+            "question": RunnablePassthrough(),
+        }
+        | prompt
+        | llm
+    )
+
+    return chain.invoke(message, config={"callbacks": [ChatCallbackHandler()]})
+
 def send_message(message, role, save=True):
     with st.chat_message(role):
         st.markdown(message)
     if save:
         save_message(message, role)
 
-
-# 메시지 저장 함수
 def save_message(message, role):
     st.session_state["messages"].append({"message": message, "role": role})
 
-
-# 채팅 기록 불러오기 함수
 def load_chat_history():
     for message in st.session_state["messages"]:
         send_message(message["message"], message["role"], save=False)
@@ -125,7 +136,6 @@ st.sidebar.markdown(
 - PDF (.pdf)
 - 텍스트 파일 (.txt)
 - Word 문서 (.docx)
-
 """
 )
 
@@ -135,40 +145,26 @@ with st.sidebar:
     )
 
 if file and openai_api_key:
-    retriever = embed_file(file)
-
-    llm = ChatOpenAI(
-        model_name="gpt-4-turbo-preview",
-        temperature=0.1,
-        api_key=openai_api_key,
-    )
+    # 문서가 새로 업로드되었을 때만 처리
+    if st.session_state.retriever is None:
+        st.session_state.retriever = process_document(file)
 
     send_message("무엇이든 물어보세요!", "ai", save=False)
     load_chat_history()
+
     message = st.chat_input("업로드한 문서에 대해 무엇이든 물어보세요")
 
     if message:
         send_message(message, "human")
-        chain = (
-            {
-                "context": retriever
-                | RunnableLambda(lambda docs: format_documents(docs)),
-                "question": RunnablePassthrough(),
-            }
-            | prompt
-            | llm
-        )
         with st.chat_message("ai"):
-            callback = ChatCallbackHandler()
-            response = chain.invoke(
-                message,
-                config={"callbacks": [callback]}
-            )
+            response = get_response(message, st.session_state.retriever)
             st.markdown(response.content)
 
 elif not openai_api_key:
     st.warning("사이드바에 OpenAI API 키를 입력해주세요")
     st.session_state["messages"] = []
+    st.session_state.retriever = None
 
 else:
     st.session_state["messages"] = []
+    st.session_state.retriever = None
