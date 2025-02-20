@@ -35,6 +35,8 @@ class ChatCallbackHandler(BaseCallbackHandler):
 if "messages" not in st.session_state:
     st.session_state["messages"] = []
 
+if "vectorstore" not in st.session_state:
+    st.session_state.vectorstore = None
 
 @st.cache_resource(show_spinner="파일을 분석하고있어요...")
 def embed_file(file):
@@ -70,9 +72,11 @@ def embed_file(file):
 
     # cached_embeddings = CacheBackedEmbeddings.from_bytes_store(embeddings, cache_dir)
 
-    vectorstore = FAISS.from_documents(docs, embeddings)
+    # vectorstore = FAISS.from_documents(docs, embeddings)
 
-    retriever = vectorstore.as_retriever()
+    st.session_state.vectorstore = FAISS.from_documents(docs, embeddings)
+
+    retriever = st.session_state.vectorstore.as_retriever()
 
     # 세션에 임베딩 저장
     st.session_state.embeddings[file_name] = embeddings
@@ -147,7 +151,11 @@ with st.sidebar:
     )
 
 if file and openai_api_key:
-    retriever = embed_file(file)
+
+    if st.session_state.vectorstore is None:
+        retriever = embed_file(file)
+    else:
+        retriever = st.session_state.vectorstore.as_retriever()
 
     llm = ChatOpenAI(
         model_name="gpt-4o-mini",
