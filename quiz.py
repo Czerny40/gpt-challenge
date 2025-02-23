@@ -9,7 +9,7 @@ from langchain.callbacks import StreamingStdOutCallbackHandler
 
 
 function = {
-    "name": "create_quiz",
+    "name": "get_questions",
     "description": "function that takes a list of questions and answers and returns a quiz",
     "parameters": {
         "type": "object",
