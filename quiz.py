@@ -2,7 +2,7 @@ import json
 import streamlit as st
 from langchain.chat_models import ChatOpenAI
 from langchain.document_loaders import UnstructuredFileLoader
-from langchain.text_splitters import RecursiveCharacterTextSplitter
+from langchain.text_splitters import CharacterTextSplitter
 from langchain.prompts import ChatPromptTemplate
 from langchain.retrievers import WikipediaRetriever
 from langchain.callbacks import StreamingStdOutCallbackHandler
@@ -79,11 +79,8 @@ def split_file(file):
     with open(file_path, "wb") as f:
         f.write(file_content)
 
-    splitter = RecursiveCharacterTextSplitter(
-        chunk_size=1000,
-        chunk_overlap=200,
-        separators=["\n\n", "\n"],
-        length_function=len,
+    splitter = CharacterTextSplitter.from_tiktoken_encoder(
+        separator="\n", chunk_size=600, chunk_overlap=100
     )
 
     file_loader = UnstructuredFileLoader(file_path)
