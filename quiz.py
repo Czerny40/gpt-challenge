@@ -179,6 +179,6 @@ else:
                         correct_count += 1
                     else:
                         st.error(f"Q{idx+1} 틀렸습니다.")
-                        
-            if correct_count == len(questions):
-                st.balloons()
+
+                if correct_count == len(questions):
+                    st.balloons()
