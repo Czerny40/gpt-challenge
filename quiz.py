@@ -1,6 +1,6 @@
 import json
 import streamlit as st
-from langchain_openai import ChatOpenAI
+from langchain.chat_models import ChatOpenAI
 from langchain.document_loaders import UnstructuredFileLoader
 from langchain.text_splitters import RecursiveCharacterTextSplitter
 from langchain.prompts import ChatPromptTemplate
