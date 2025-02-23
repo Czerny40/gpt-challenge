@@ -158,23 +158,27 @@ else:
 
         with st.form("questions_form"):
             questions = json.loads(response)["questions"]
-
-            question_count = len(questions)
-            correct_count = 0
+            answers = []
 
             for idx, question in enumerate(questions):
                 st.markdown(f'Q{idx+1}. {question["question"]}')
-                value = st.radio(
+                answer = st.radio(
                     "답을 고르세요.",
                     [answer["answer"] for answer in question["answers"]],
+                    key=f"question_{idx}",
                 )
+                answers.append(answer)
 
-                if {"answer": value, "correct": True} in question["answers"]:
-                    st.success("정답입니다!")
-                    correct_count += 1
-                elif value is not None:
-                    st.error("틀렸습니다.")
-            if question_count == correct_count:
+            submitted = st.form_submit_button("제출")
+
+            if submitted:
+                correct_count = 0
+                for idx, (question, user_answer) in enumerate(zip(questions, answers)):
+                    if {"answer": user_answer, "correct": True} in question["answers"]:
+                        st.success(f"Q{idx+1} 정답입니다!")
+                        correct_count += 1
+                    else:
+                        st.error(f"Q{idx+1} 틀렸습니다.")
+                        
+            if correct_count == len(questions):
                 st.balloons()
-
-            button = st.form_submit_button()
