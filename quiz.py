@@ -145,6 +145,7 @@ else:
             temperature=0.2,
             streaming=True,
             callbacks=[StreamingStdOutCallbackHandler()],
+            api_key=openai_api_key,
         ).bind(
             function_call={
                 "name": "get_questions",
