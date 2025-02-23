@@ -2,7 +2,7 @@ import json
 import streamlit as st
 from langchain.chat_models import ChatOpenAI
 from langchain.document_loaders import UnstructuredFileLoader
-from langchain.text_splitters import CharacterTextSplitter
+from langchain.text_splitter import CharacterTextSplitter
 from langchain.prompts import ChatPromptTemplate
 from langchain.retrievers import WikipediaRetriever
 from langchain.callbacks import StreamingStdOutCallbackHandler
