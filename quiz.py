@@ -1,8 +1,8 @@
 import json
 import streamlit as st
-from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_community.document_loaders import UnstructuredFileLoader
 from langchain_openai import ChatOpenAI
+from langchain.document_loaders import UnstructuredFileLoader
+from langchain.text_splitters import RecursiveCharacterTextSplitter
 from langchain.prompts import ChatPromptTemplate
 from langchain.retrievers import WikipediaRetriever
 from langchain.callbacks import StreamingStdOutCallbackHandler
