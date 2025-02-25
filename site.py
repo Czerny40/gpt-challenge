@@ -125,6 +125,7 @@ def load_website(url):
         docs,
         OpenAIEmbeddings(
             model="text-embedding-3-small",
+            api_key=openai_api_key,
         ),
     )
     return vector_store.as_retriever()
