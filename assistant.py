@@ -96,7 +96,7 @@ def get_ddg_results(inputs):
     query = inputs["query"]
     ddgs = DDGS()
     results = ddgs.text(query)
-    time.sleep(0.5)
+    time.sleep(1)
     return results
 
 
