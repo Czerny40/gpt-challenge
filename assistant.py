@@ -5,6 +5,8 @@ from openai import OpenAI
 from langchain.utilities import WikipediaAPIWrapper
 from langchain.tools import WikipediaQueryRun, DuckDuckGoSearchResults
 from langchain.document_loaders import WebBaseLoader
+import time
+from duckduckgo_search import DDGS
 
 st.title("🔍 Research Assistant")
 
@@ -12,6 +14,7 @@ openai_api_key = st.sidebar.text_input("OpenAI API Key", type="password")
 st.sidebar.markdown("https://github.com/Czerny40/gpt-challenge")
 
 client = OpenAI(api_key=openai_api_key)
+
 
 def create_assistant():
     if "assistant" in st.session_state:
@@ -88,10 +91,14 @@ def create_assistant():
     st.session_state["assistant"] = assistant
     return st.session_state["assistant"]
 
+
 def get_ddg_results(inputs):
     query = inputs["query"]
-    search = DuckDuckGoSearchResults()
-    return search.run(query)
+    ddgs = DDGS()
+    results = ddgs.text(query)
+    time.sleep(0.5)
+    return results
+
 
 def get_wiki_results(inputs):
     query = inputs["query"]
@@ -99,17 +106,20 @@ def get_wiki_results(inputs):
     wikipedia = WikipediaQueryRun(api_wrapper=wikipedia_api)
     return wikipedia.run(query)
 
+
 def ddg_scraper(inputs):
     url = inputs["url"]
     loader = WebBaseLoader(url)
     docs = loader.load()
     return docs[0].page_content.replace("\n", "")
 
+
 functions_map = {
     "get_ddg_results": get_ddg_results,
     "ddg_scraper": ddg_scraper,
     "get_wiki_results": get_wiki_results,
 }
+
 
 def get_thread_id():
     if "thread_id" not in st.session_state:
@@ -124,21 +134,24 @@ def get_thread_id():
         st.session_state["thread_id"] = thread.id
     return st.session_state["thread_id"]
 
+
 def get_run(run_id, thread_id):
     return client.beta.threads.runs.retrieve(
         run_id=run_id,
         thread_id=thread_id,
     )
 
+
 def auto_save_results(content):
     filename = "research_result.txt"
-    
-    os.makedirs('results', exist_ok=True)
-    
-    with open(os.path.join('results', filename), 'w', encoding='utf-8') as f:
+
+    os.makedirs("results", exist_ok=True)
+
+    with open(os.path.join("results", filename), "w", encoding="utf-8") as f:
         f.write(content)
-    
+
     st.success(f"Results saved to {filename}")
+
 
 def start_run(thread_id, assistant_id, content):
     if "run" not in st.session_state or get_run(
@@ -178,6 +191,7 @@ def start_run(thread_id, assistant_id, content):
         with st.chat_message("assistant"):
             st.markdown("Sorry. I failed researching. Try Again later :()")
 
+
 def get_messages(thread_id):
     messages = list(
         client.beta.threads.messages.list(
@@ -185,6 +199,7 @@ def get_messages(thread_id):
         )
     )
     return list(reversed(messages))
+
 
 def get_tool_outputs(run_id, thread_id):
     run = get_run(run_id, thread_id)
@@ -203,15 +218,18 @@ def get_tool_outputs(run_id, thread_id):
         )
     return outputs
 
+
 def submit_tool_outputs(run_id, thread_id):
     outputs = get_tool_outputs(run_id, thread_id)
     return client.beta.threads.runs.submit_tool_outputs_and_poll(
         run_id=run_id, thread_id=thread_id, tool_outputs=outputs
     )
 
+
 def send_message(_content: str):
     thread_id = get_thread_id()
     start_run(thread_id, assistant_id, _content)
+
 
 if not openai_api_key:
     st.error("OpenAI API 키를 입력해주세요.")
