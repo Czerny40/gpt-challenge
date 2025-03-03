@@ -8,7 +8,7 @@ from langchain.document_loaders import WebBaseLoader
 import time
 from duckduckgo_search import DDGS
 
-st.title("🔍 Research Assistant")
+st.title("Research Assistant")
 
 openai_api_key = st.sidebar.text_input("OpenAI API Key", type="password")
 st.sidebar.markdown("https://github.com/Czerny40/gpt-challenge")
