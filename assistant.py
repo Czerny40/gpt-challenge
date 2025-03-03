@@ -216,7 +216,7 @@ def get_tool_outputs(run_id, thread_id):
                 "tool_call_id": action_id,
             }
         )
-    return outputs
+    return json.dumps(outputs)
 
 
 def submit_tool_outputs(run_id, thread_id):
