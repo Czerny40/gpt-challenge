@@ -8,7 +8,7 @@ from langchain.document_loaders import WebBaseLoader
 import time
 from duckduckgo_search import DDGS
 
-st.title("Research Assistant")
+st.title("🔍 Research Assistant")
 
 openai_api_key = st.sidebar.text_input("OpenAI API Key", type="password")
 st.sidebar.markdown("https://github.com/Czerny40/gpt-challenge")
@@ -75,7 +75,7 @@ def create_assistant():
     ]
 
     assistant = client.beta.assistants.create(
-        name="Research Assistant",
+        name="Research_Assistant",
         instructions="""
         You are a research expert. Use Wikipedia or DuckDuckGo to gather comprehensive and accurate information about the query provided. 
         When you find a relevant website through DuckDuckGo, scrape the content from that website. Use this scraped content to thoroughly research and formulate a detailed answer to the question. 
